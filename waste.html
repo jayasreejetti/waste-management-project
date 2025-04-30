@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Waste Classifier (Teachable Machine)</title>
+
+    <!-- ✅ Correct TensorFlow and TM Image Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f8f5;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #27ae60;
+            color: white;
+            padding: 12px 24px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #1e8449;
+        }
+
+        #webcam-container {
+            margin-top: 30px;
+        }
+
+        #label-container div {
+            margin: 8px auto;
+            font-size: 18px;
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 6px;
+            width: 280px;
+            transition: background 0.3s ease;
+        }
+
+        .highlight {
+            background-color: #a8e6a3 !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Waste Classifier (Teachable Machine)</h1>
+    <button type="button" onclick="init()">Start</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+
+    <script type="text/javascript">
+        // ✅ Your Teachable Machine model URL
+        const URL = "https://teachablemachine.withgoogle.com/models/ZCr4WhZos/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(224, 224, flip);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = "";
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+
+            let maxIndex = 0;
+            for (let i = 1; i < prediction.length; i++) {
+                if (prediction[i].probability > prediction[maxIndex].probability) {
+                    maxIndex = i;
+                }
+            }
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction =
+                    `${prediction[i].className}: ${(prediction[i].probability * 100).toFixed(1)}%`;
+                const labelDiv = labelContainer.childNodes[i];
+                labelDiv.innerHTML = classPrediction;
+                labelDiv.classList.toggle("highlight", i === maxIndex);
+            }
+        }
+    </script>
+</body>
+</html>
